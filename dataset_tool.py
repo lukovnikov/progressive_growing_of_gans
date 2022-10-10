@@ -68,10 +68,11 @@ class TFRecordExporter:
             assert self.shape[0] in [1, 3]
             assert self.shape[1] == self.shape[2]
             assert self.shape[1] == 2**self.resolution_log2
-            tfr_opt = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.NONE)
+            from tensorflow.python.lib.io.tf_record import TFRecordCompressionType
+            tfr_opt = tf.io.TFRecordOptions(TFRecordCompressionType.NONE)
             for lod in range(self.resolution_log2 - 1):
                 tfr_file = self.tfr_prefix + '-r%02d.tfrecords' % (self.resolution_log2 - lod)
-                self.tfr_writers.append(tf.python_io.TFRecordWriter(tfr_file, tfr_opt))
+                self.tfr_writers.append(tf.io.TFRecordWriter(tfr_file, tfr_opt))
         assert img.shape == self.shape
         for lod, tfr_writer in enumerate(self.tfr_writers):
             if lod:
@@ -438,7 +439,7 @@ def create_celeba(tfrecord_dir, celeba_dir, cx=89, cy=121):
     image_filenames = sorted(glob.glob(glob_pattern))
     expected_images = 202599
     if len(image_filenames) != expected_images:
-        error('Expected to find %d images' % expected_images)
+        error(f'Expected to find {expected_images} images, found {len(image_filenames)}')
     
     with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
         order = tfr.choose_shuffled_order()
@@ -454,8 +455,10 @@ def create_celeba(tfrecord_dir, celeba_dir, cx=89, cy=121):
 def create_celebahq(tfrecord_dir, celeba_dir, delta_dir, num_threads=4, num_tasks=100):
     print('Loading CelebA from "%s"' % celeba_dir)
     expected_images = 202599
-    if len(glob.glob(os.path.join(celeba_dir, 'img_celeba', '*.jpg'))) != expected_images:
-        error('Expected to find %d images' % expected_images)
+    glob_pattern = os.path.join(celeba_dir, 'img_celeba', '*.jpg')
+    image_filenames = sorted(glob.glob(glob_pattern))
+    if len(image_filenames) != expected_images:
+        error(f'Expected to find {expected_images} images, found {len(image_filenames)}')
     with open(os.path.join(celeba_dir, 'Anno', 'list_landmarks_celeba.txt'), 'rt') as file:
         landmarks = [[float(value) for value in line.split()[1:]] for line in file.readlines()[2:]]
         landmarks = np.float32(landmarks).reshape(-1, 5, 2)
